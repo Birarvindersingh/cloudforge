@@ -3,7 +3,6 @@ import paramiko
 import time
 
 KEY_PATH = "/home/ubuntu/cloudforge_key.pem"
-INSTANCE_IP = "SERVER_IP"
 
 def create_env():
     try:
@@ -76,11 +75,17 @@ def restart_env():
 
 def run_ssh_command(command):
     try:
+        result = subprocess.check_output(
+            ["terraform", "output", "-raw", "instance_ip"],
+            cwd="terraform"
+        )
+        ip = result.decode().strip()
+
         ssh = paramiko.SSHClient()
         ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
 
         ssh.connect(
-            hostname=INSTANCE_IP,
+            hostname=ip,
             username="ubuntu",
             key_filename=KEY_PATH
         )
@@ -124,8 +129,26 @@ def destroy_env():
         }
 
 def get_status():
+    try:
+        result = subprocess.check_output(
+            ["terraform", "output", "-raw", "instance_ip"],
+            cwd="terraform",
+            stderr=subprocess.STDOUT
+        )
+        ip = result.decode().strip()
+
+        if ip and "No outputs found" not in ip:
+            return {
+                "status": "running",
+                "instances": 1,
+                "health": "ok",
+                "ip": ip
+            }
+    except Exception:
+        pass
+
     return {
-        "status": "running",
-        "instances": 1,
-        "health": "ok"
+        "status": "stopped",
+        "instances": 0,
+        "health": "n/a"
     }
