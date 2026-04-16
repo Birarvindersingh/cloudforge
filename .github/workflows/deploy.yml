@@ -1,14 +1,11 @@
 name: Deploy CloudForge
-
 on:
   push:
     branches:
       - main
-
 jobs:
   deploy:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v6.0.2
@@ -19,22 +16,18 @@ jobs:
           host: ${{ secrets.SERVER_IP }}
           username: ubuntu
           key: ${{ secrets.SSH_KEY }}
+          command_timeout: 10m
           script: |
             if [ ! -d "cloudforge" ]; then
               git clone https://github.com/Birarvindersingh/cloudforge.git
             fi
-
             cd cloudforge
             git pull
-
-            sudo apt-get update -y
-            sudo apt-get install -y python3-venv
-
+            
             python3 -m venv venv
             source venv/bin/activate
-
-            pip install -r requirements.txt
-
+            
+            pip install --no-cache-dir -r requirements.txt
+            
             pkill -f uvicorn || true
-
             nohup venv/bin/uvicorn app.main:app --host 0.0.0.0 --port 8000 > log.txt 2>&1 &
