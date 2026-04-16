@@ -1,34 +1,40 @@
 name: Deploy CloudForge
 
 on:
-    push:
-        branches:
-            - main
+  push:
+    branches:
+      - main
 
 jobs:
-    deploy:
-        runs-on: ubuntu-latest
+  deploy:
+    runs-on: ubuntu-latest
 
-        steps:
-            - name: Checkout code
-              uses: actions/checkout@v6.0.2
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6.0.2
+        
+      - name: Deploy to EC2
+        uses: appleboy/ssh-action@v1.2.5
+        with:
+          host: ${{ secrets.SERVER_IP }}
+          username: ubuntu
+          key: ${{ secrets.SSH_KEY }}
+          script: |
+            if [ ! -d "cloudforge" ]; then
+              git clone https://github.com/Birarvindersingh/cloudforge.git
+            fi
 
-            - name: Deploy to EC2
-              uses: appleboy/ssh-action@v1.2.5
-              with:
-                host: ${{ secrets.SERVER_IP }}
-                username: ubuntu
-                key: ${{ secrets.SSH_KEY }}
-                script: |
-                  if [ ! -d "cloudforge" ]; then
-                    git clone https://github.com/Birarvindersingh/cloudforge.git
-                  fi
+            cd cloudforge
+            git pull
 
-                  cd cloudforge
-                  git pull
+            sudo apt-get update -y
+            sudo apt-get install -y python3-venv
 
-                  pip3 install -r requirements.txt
+            python3 -m venv venv
+            source venv/bin/activate
 
-                  pkill -f uvicorn || true
+            pip install -r requirements.txt
 
-                  nohup uvicorn app.main:app --host 0.0.0.0 --port 8000 > log.txt 2>&1 &
+            pkill -f uvicorn || true
+
+            nohup venv/bin/uvicorn app.main:app --host 0.0.0.0 --port 8000 > log.txt 2>&1 &
