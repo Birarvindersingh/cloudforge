@@ -25,20 +25,34 @@ jobs:
             if [ ! -d "cloudforge" ]; then
               git clone https://github.com/Birarvindersingh/cloudforge.git
             fi
+            
+            cd cloudforge
+            git pull
+            
+            if [ ! -d "venv" ]; then
+              python3 -m venv venv
+            fi
+            
+            source venv/bin/activate
+            
+            pip install --upgrade pip setuptools wheel
+            pip install -r requirements.txt --no-cache-dir
+            
+            sudo bash -c 'cat <<EOF > /etc/systemd/system/cloudforge.service
+            [Unit]
+            Description=CloudForge FastAPI Server
+            After=network.target
 
-              cd cloudforge
-              git pull
+            [Service]
+            User=ubuntu
+            WorkingDirectory=/home/ubuntu/cloudforge
+            ExecStart=/home/ubuntu/cloudforge/venv/bin/uvicorn app.main:app --host 0.0.0.0 --port 8000
+            Restart=always
 
-              source venv/bin/activate
-
-              pip install -r requirements.txt --no-cache-dir
-
-              echo "Stopping old server..."
-              pkill -f "uvicorn app.main:app" || echo "No server running"
-              sleep 2
-
-              echo "Starting new server..."
-              nohup venv/bin/uvicorn app.main:app --host 0.0.0.0 --port 8000 > log.txt 2>&1 < /dev/null &
-              disown
-
-              echo "Deployment successful"
+            [Install]
+            WantedBy=multi-user.target
+            EOF'
+            
+            sudo systemctl daemon-reload
+            sudo systemctl enable cloudforge
+            sudo systemctl restart cloudforge
