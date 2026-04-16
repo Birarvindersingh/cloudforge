@@ -20,7 +20,7 @@ jobs:
           host: ${{ secrets.SERVER_IP }}
           username: ubuntu
           key: ${{ secrets.SSH_KEY }}
-          command_timeout: 20m
+          command_timeout: 10m
           script: |
             if [ ! -d "cloudforge" ]; then
               git clone https://github.com/Birarvindersingh/cloudforge.git
@@ -28,9 +28,6 @@ jobs:
 
             cd cloudforge
             git pull
-
-            sudo apt-get update -y
-            sudo apt-get install -y python3-venv
 
             if [ ! -d "venv" ]; then
               python3 -m venv venv
@@ -41,8 +38,7 @@ jobs:
             pip install --upgrade pip setuptools wheel
             pip install -r requirements.txt --no-cache-dir
 
-            pgrep -f "uvicorn app.main:app" && pkill -f "uvicorn app.main:app" || echo "No server running"
+            pkill -f uvicorn || true
             sleep 2
 
-            nohup venv/bin/uvicorn app.main:app --host 0.0.0.0 --port 8000 > log.txt 2>&1 &
-            echo "Deployment completed successfully"
+            nohup venv/bin/uvicorn app.main:app --host 0.0.0.0 --port 8000 > log.txt 2>&1 < /dev/null &
